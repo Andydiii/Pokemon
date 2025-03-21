@@ -1,4 +1,4 @@
-export function TypeCard() {
+export default function TypeCard() {
     return (
         <div>
             
