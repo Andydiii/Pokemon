@@ -8,6 +8,12 @@ export function PokeCard({selectedPokemon}) {
     const [loading, setLoading] = useState(false); // when we fetch the pokemon data, true
 
     const { name, height, abilities, stats, types, moves, sprites} = data || {};
+
+    const imgList = Object.keys(sprites || {}).filter((val) => {    // object.keys returns an array of keys of the object
+        if (!sprites[val]) { return false; }
+        if (['versions', 'other'].includes(val)) { return false;} // exclude the versions and other keys
+        return true; // include the rest of the keys
+    })
     
     // whenever the user selected a new pokemon, this block of code is triggered.
     // if data of the selcted pokemon is in localstorage -> extract to cache -> extract to data.
@@ -73,6 +79,31 @@ export function PokeCard({selectedPokemon}) {
                         <TypeCard key={typeIndex} type={typeObj?.type?.name} />
                     )
                 })}                
+            </div>
+            <img className="default-img" src={"/pokemon/" + getFullPokedexNumber(selectedPokemon) + '.png' }  alt={`${name}-large-img`} />
+            <div className="img-container">
+                {imgList.map((spritekey, spriteIndex) => {
+                    const imgUrl = sprites[spritekey]; // get the url of the image
+                    return (
+                        <img key={spriteIndex} src={imgUrl} alt={ `${name}-img-${spritekey}`} />
+                    )
+                })}
+            </div>
+            <h3>Stats</h3>
+            <div className="stats-card">
+                {stats.map((statObj, statIndex) => {
+                    const {stat, base_stat} = statObj;
+                    return (
+                        <div key={statIndex} className="stat-item">
+                            <p>{stat?.name.replaceAll('-' , ' ')}</p>
+                            <h4>{base_stat}</h4>
+                        </div>
+                    )
+                })}
+            </div>
+            <h3>Moves</h3>
+            <div className="pokemon-move-grid">
+                
             </div>
         </div>
     )
