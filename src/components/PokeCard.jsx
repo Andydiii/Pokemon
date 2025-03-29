@@ -2,10 +2,13 @@ import { useState } from "react"
 import { useEffect } from "react"
 import { getFullPokedexNumber, getPokedexNumber } from "../utils";
 import TypeCard from "./typeCard";
+import {Modal} from "./Modal";
 
 export function PokeCard({selectedPokemon}) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false); // when we fetch the pokemon data, true
+    const [skill, setSkill] = useState(null);
+    const [loadingSkill, setLoadingSkill] = useState(false);    
 
     const { name, height, abilities, stats, types, moves, sprites} = data || {};
 
@@ -15,6 +18,44 @@ export function PokeCard({selectedPokemon}) {
         return true; // include the rest of the keys
     })
     
+    async function fetchMoveData(move, moveUrl) {  
+        if (loadingSkill || !localStorage || !moveUrl) {return;}
+
+        // check cache for move
+        let cache = {}
+        if (localStorage.getItem('pokemon-moves')) {
+            cache = JSON.parse(localStorage.getItem('pokemon-moves'));
+        }
+
+        if (move in cache) {
+            setSkill(cache[move])
+            console.log('Found pokemon in cache');
+            return
+        }
+
+        try {
+            setLoadingSkill(true);
+            const response = await fetch(moveUrl);
+            const moveData = await response.json();
+            console.log('Fetched move from API' , moveData);
+            const description = moveData?.flavor_text_entries.filter(val => {
+                return val.version_group.name = 'firered-leafgreen'
+            })[0]?.flavor_text
+
+            const skillData = {
+                name: move,
+                description
+            }
+            setSkill(skillData);
+            cache[move] = skillData;
+            localStorage.setItem('pokemon-moves', JSON.stringify(cache));
+        } catch (err) {
+            console.log(err);
+        } finally {
+            setLoadingSkill(false);
+        }
+    }
+
     // whenever the user selected a new pokemon, this block of code is triggered.
     // if data of the selcted pokemon is in localstorage -> extract to cache -> extract to data.
     // if not in loclastorage -> fetch from api -> extract to cache -> loclastorage
@@ -47,7 +88,7 @@ export function PokeCard({selectedPokemon}) {
                 const response = await fetch(finalUrl)
                 const pokemonData = await response.json()
                 setData(pokemonData);
-                console.log(pokemonData);
+                console.log("Fetched pokemon  data from API");
                 cache[selectedPokemon] = pokemonData; // cache is an object
                 localStorage.setItem('pokedex' , JSON.stringify(cache));
             } catch (err) {
@@ -68,7 +109,20 @@ export function PokeCard({selectedPokemon}) {
     }
 
     return (
-        <div>
+        <div className="poke-card">
+            {skill && (
+                <Modal handleCloseModal={() => { setSkill(null) }}>
+                    <div>
+                        <h6>Name</h6>
+                        <h2 className="skill-name">{skill.name.replace('-', ' ')}</h2>
+                    </div>
+                    <div>
+                        <h6>Description</h6>
+                        <p>{skill.description}</p>
+                    </div>
+                </Modal>
+            )}
+
             <div>
                 <h4>#{getFullPokedexNumber(selectedPokemon)}</h4>
                 <h2>{name}</h2>
@@ -103,7 +157,15 @@ export function PokeCard({selectedPokemon}) {
             </div>
             <h3>Moves</h3>
             <div className="pokemon-move-grid">
-                
+                 {moves.map((moveObj, moveIndex) => {
+                    return (
+                        <button className="button-card pokemon-move" key={moveIndex} onClick={() => {
+                            fetchMoveData(moveObj?.move?.name, moveObj?.move?.url)
+                        }}>
+                            <p>{moveObj?.move?.name.replaceAll('-', ' ')}</p>
+                        </button>
+                    )
+                 })}
             </div>
         </div>
     )
